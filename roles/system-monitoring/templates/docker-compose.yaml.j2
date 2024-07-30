@@ -1,0 +1,56 @@
+version: '3.8'
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+    - type: bind
+      source: /opt/monitoring/config/prometheus.yml
+      target: /etc/prometheus/prometheus.yml
+    networks:
+    - prometheus-network
+    ports:
+    - "9090:9090"
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    volumes:
+    - type: bind
+      source: /opt/monitoring/config/dashboards/default.yml
+      target: /etc/grafana/provisioning/dashboards/default.yml
+
+    - type: bind
+      source: /opt/monitoring/config/datasources/default.yml
+      target: /etc/grafana/provisioning/datasources/default.yml
+
+    - type: bind
+      source: /opt/monitoring/config/cluster.json
+      target: /var/lib/grafana/dashboards/cluster.json
+
+    ports:
+    - "3000:3000"
+    environment:
+    - GF_SECURITY_ADMIN_PASSWORD=admin
+    - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+    depends_on:
+    - prometheus
+    restart: unless-stopped
+    networks:
+    - prometheus-network
+  node_exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    container_name: node_exporter
+    command:
+    - '--path.rootfs=/host'
+    pid: host
+    ports:
+    - "9100:9100"
+    restart: unless-stopped
+    volumes:
+    - '/:/host:ro,rslave'
+    networks:
+    - prometheus-network
+networks:
+  prometheus-network:
+    driver: bridge

@@ -1,0 +1,5 @@
+- name: Provision system monitoring on edge devices with Prometheus, Node exporter and Grafana
+  hosts: all
+  become: yes
+  roles:
+    - system-monitoring
