@@ -1,0 +1,73 @@
+- name: Ensure Docker is installed
+  apt:
+    name: docker
+    state: present
+
+- name: Ensure Docker Compose is installed
+  apt:
+    name: docker-compose
+    state: present
+- name: Ensure necessary directories exist
+  file:
+    path: "/opt/monitoring/{{ item }}"
+    state: directory
+    mode: '0755'
+  with_items:
+    - config
+    - config/dashboards
+    - config/datasources
+
+- name: Copy Prometheus configuration
+  copy:
+    src: prometheus.yml
+    dest: /opt/monitoring/config/prometheus.yml
+    mode: '0644'
+
+- name: Copy Grafana dashboards configuration
+  copy:
+    src: dashboards/default.yml
+    dest: /opt/monitoring/config/dashboards/default.yml
+    mode: '0644'
+
+- name: Copy Grafana datasources configuration
+  copy:
+    src: datasources/default.yml
+    dest: /opt/monitoring/config/datasources/default.yml
+    mode: '0644'
+
+- name: Copy Grafana cluster dashboard
+  copy:
+    src: cluster.json
+    dest: /opt/monitoring/config/cluster.json
+    mode: '0644'
+
+- name: Copy Docker Compose file
+  template:
+    src: docker-compose.yaml.j2
+    dest: /opt/monitoring/docker-compose.yaml
+    mode: '0644'
+
+- name: Run Docker Compose
+  command:
+    chdir: /opt/monitoring
+    cmd: docker-compose up -d
+
+- name: Stop existing Docker Compose services
+  command: docker-compose down
+  args:
+    chdir: /opt/monitoring
+  ignore_errors: yes
+
+- name: Remove unused Docker volumes
+  command: docker volume prune -f
+  ignore_errors: yes
+
+- name: Pull Docker Compose images
+  command: docker-compose pull
+  args:
+    chdir: /opt/monitoring
+
+- name: Run Docker Compose
+  command: docker-compose up -d
+  args:
+    chdir: /opt/monitoring
